@@ -1,0 +1,26 @@
+name: pixi_dragon
+description: Pixi Dragon - Flappy Bird style game
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  audioplayers: ^6.0.0
+  shared_preferences: ^2.3.2
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/background/forest_bg.png
+    - assets/images/bird/flappy_dragon.png
+    - assets/images/ground/brick_wall.png
+    - assets/images/obstacles/obstacle.png
+    - assets/audio/liberation.mpeg
+

@@ -1,0 +1,248 @@
+================================================================
+PIXI DRAGON — PROJECT REQUIREMENTS DOCUMENT
+================================================================
+Project Name   : Pixi Dragon
+Platform       : Android (Flutter)
+Architecture   : Flutter + Provider + Local Storage
+Version        : 1.0.0+1
+Last Updated   : March 2026
+================================================================
+
+
+----------------------------------------------------------------
+1. PROJECT OVERVIEW
+----------------------------------------------------------------
+Pixi Dragon is a Flappy Bird-style mobile game for Android.
+The player controls a dragon that flies through gaps between
+pipes by tapping the screen. The game ends when the dragon
+hits a pipe, the ground, or the ceiling. Scores are saved
+locally on the device.
+
+
+----------------------------------------------------------------
+2. TECH STACK
+----------------------------------------------------------------
+Framework        : Flutter (Dart)
+State Management : Provider ^6.1.2
+Local Storage    : shared_preferences ^2.3.2
+Audio            : audioplayers ^6.0.0
+Backend          : None (fully offline)
+Database         : None (device storage only)
+
+
+----------------------------------------------------------------
+3. PROJECT STRUCTURE
+----------------------------------------------------------------
+lib/
+ ├── constants/
+ │    └── app_assets.dart
+ ├── providers/
+ │    └── game_provider.dart
+ ├── screens/
+ │    ├── splash_screen.dart
+ │    ├── game_screen.dart
+ │    └── settings_screen.dart
+ ├── services/
+ │    └── audio_service.dart
+ ├── widgets/
+ │    ├── dragon.dart
+ │    ├── pipe.dart
+ │    └── score_bar.dart
+ └── main.dart
+
+assets/
+ ├── images/
+ │    ├── background/forest_bg.png
+ │    ├── bird/flappy_dragon.png
+ │    ├── ground/brick_wall.png
+ │    └── obstacles/obstacle.png
+ └── audio/
+      └── liberation.mpeg
+
+
+----------------------------------------------------------------
+4. SCREENS
+----------------------------------------------------------------
+
+4.1 SPLASH SCREEN (splash_screen.dart)
+  - Shows dragon image centred on black background
+  - Shows text "ASK" below the dragon
+  - Dragon and text fade in together over 600ms
+  - After 2.4 seconds, fades out and navigates to GameScreen
+  - Transition: smooth fade (700ms) — no slide
+
+4.2 GAME SCREEN (game_screen.dart)
+  - Main screen of the app
+  - Contains all game states: ready, playing, game over
+  - Background: forest_bg.png (full screen cover)
+  - Ground: brick_wall.png (120px, pinned to bottom)
+  - Dragon: centred horizontally, position driven by GameProvider
+  - Score bar: always visible in all states
+  - Settings button: top-right corner, visible in ready state only
+  - START button: visible in ready state, centred below dragon
+  - RESTART button: visible in game over overlay
+  - Tap anywhere to flap (playing state only)
+
+4.3 SETTINGS SCREEN (settings_screen.dart)
+  - Accessible from game screen (ready state only)
+  - Accessible after restart (returns to ready state)
+  - Transition: slides in from right (350ms, easeOutCubic)
+  - Dark themed UI (#1A1A2E background)
+  - Contains one section: AUDIO
+    - Background music toggle (on/off switch)
+    - Horizontal volume slider (left = quieter, right = louder)
+    - Volume percentage shown live
+    - Slider disabled when music is muted
+    - All settings persist across app restarts
+
+
+----------------------------------------------------------------
+5. GAME MECHANICS
+----------------------------------------------------------------
+
+5.1 DRAGON
+  - Rendered at 85px width using BoxFit.contain
+  - Always horizontally centred on screen
+  - Vertical position driven by physics (gravity + jump)
+  - Gravity         : 3.8 normalized units/s²
+  - Jump velocity   : -1.4 normalized units/s (upward)
+  - Hitbox height   : 45% of image height (visible body only)
+  - Hitbox width    : 70% of hitbox height (slim profile)
+
+5.2 PIPES
+  - Image: obstacle.png rendered at 80px width
+  - Move from right to left across screen
+  - Two pipes active at all times (pool recycled)
+  - Gap between pipe pairs: randomised (1.6 to 2.2 normalized units)
+  - Gap centre Y: randomised between -0.25 and +0.25
+  - Gap half-height: 0.32 normalized units (full gap = 0.64)
+  - Pipe hitbox width: 65% of image width (ignores transparent edges)
+  - Base speed: 0.9 normalized units/s
+  - Fast speed: 1.4 normalized units/s (after score >= 10)
+
+5.3 GROUND
+  - Image: brick_wall.png rendered at 120px height
+  - Pinned to bottom of screen
+  - Collision fires at 50% into the ground image (visible brick surface)
+
+5.4 COORDINATE SYSTEM
+  - All game logic uses normalized -1.0 to +1.0 space
+  - -1.0 = top of screen, +1.0 = bottom of screen
+  - Dragon x is always 0.0 (horizontal centre)
+  - Screen size injected into GameProvider every frame
+
+
+----------------------------------------------------------------
+6. COLLISION DETECTION
+----------------------------------------------------------------
+  - All collision checks run in normalized space
+  - Dragon AABB (axis-aligned bounding box) checked against:
+      a. Ceiling: dragon top edge <= -1.0
+      b. Ground:  dragon bottom edge >= ground top (normalized)
+      c. Pipes:   horizontal overlap confirmed first, then
+                  dragon must be fully inside gap corridor
+                  (both top and bottom edges) to survive
+  - Any part of dragon outside gap corridor = game over
+  - Collision uses visible pixel fractions, not full image bounds
+
+
+----------------------------------------------------------------
+7. SCORING
+----------------------------------------------------------------
+  - Score increments by 1 each time dragon passes a pipe
+  - Pipe is "passed" when pipe right edge crosses dragon centre (x=0)
+  - Current score: displayed top-centre during gameplay
+  - Best score: displayed top-left at all times (all states)
+  - Best score persisted to Android device storage via shared_preferences
+  - Best score loads on app launch (shows 0 if first time)
+  - Best score updates immediately when new record is set
+
+
+----------------------------------------------------------------
+8. DIFFICULTY PROGRESSION
+----------------------------------------------------------------
+  - Score 0–9   : base pipe speed (0.9 units/s)
+  - Score 10+   : fast pipe speed (1.4 units/s)
+  - Gap position: always randomised, no fixed pattern
+  - Gap spacing : randomised between 1.6 and 2.2 normalized units
+
+
+----------------------------------------------------------------
+9. AUDIO
+----------------------------------------------------------------
+  - File: assets/audio/liberation.mpeg
+  - Playback: looping background music
+  - Starts: when GameScreen mounts (after splash ends)
+  - Stops: when app is closed (GameScreen disposed)
+  - Volume: adjustable via slider in settings (0% to 100%)
+  - Default volume: 70%
+  - Mute toggle: on/off switch in settings
+  - Volume and mute state persisted via shared_preferences
+  - Mute toggle resumes playback correctly when unmuted
+
+
+----------------------------------------------------------------
+10. DATA PERSISTENCE (Android Device Storage)
+----------------------------------------------------------------
+  Key                      Type     Description
+  ────────────────────────────────────────────────────────────
+  pixi_dragon_best_score   int      All-time best score
+  pixi_dragon_volume       double   Last set volume (0.0–1.0)
+  pixi_dragon_muted        bool     Last mute state
+
+
+----------------------------------------------------------------
+11. GAME STATES
+----------------------------------------------------------------
+  ready     → Initial state on launch and after restart
+              Shows: dragon, START button, settings icon,
+                     score bar (score = 0, best = persisted)
+
+  playing   → Active game loop running
+              Shows: dragon, pipes, score bar, tap-to-flap layer
+              Hides: START button, settings icon
+
+  gameOver  → Game loop stopped, dragon has collided
+              Shows: GAME OVER card, score, best score,
+                     RESTART button, settings icon hidden
+              RESTART resets state back to ready
+
+
+----------------------------------------------------------------
+12. ASSETS (DO NOT MODIFY PATHS)
+----------------------------------------------------------------
+  assets/images/background/forest_bg.png
+  assets/images/bird/flappy_dragon.png
+  assets/images/ground/brick_wall.png
+  assets/images/obstacles/obstacle.png
+  assets/audio/liberation.mpeg
+
+
+----------------------------------------------------------------
+13. REMOVED FEATURES (NOT TO BE REINTRODUCED)
+----------------------------------------------------------------
+  - Firebase (firebase_core, firebase_auth, cloud_firestore)
+  - Leaderboard screen
+  - Login screen
+  - Anonymous authentication
+  - Remote score sync
+  - iOS / web / desktop support
+
+
+----------------------------------------------------------------
+14. KNOWN TUNING CONSTANTS (game_provider.dart)
+----------------------------------------------------------------
+  To adjust feel of the game, only change these constants:
+
+  gapHalfHeight        = 0.32   ↑ easier  ↓ harder
+  _dragonBodyFraction  = 0.45   ↓ smaller hitbox (more forgiving)
+  _pipeBodyFraction    = 0.65   ↓ smaller hitbox (more forgiving)
+  _gravity             = 3.8    ↑ falls faster
+  _jumpVelocity        = -1.4   ↑ jumps higher (more negative)
+  _basePipeSpeed       = 0.9    ↑ faster pipes
+  _fastPipeSpeed       = 1.4    ↑ faster pipes at difficulty spike
+  _groundSurfFraction  = 0.50   ↑ collision higher on ground image
+
+================================================================
+END OF DOCUMENT
+================================================================

@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/leaderboard_provider.dart';
 import '../services/audio_service.dart';
 import '../constants/app_assets.dart';
 import '../widgets/dragon.dart';
 import '../widgets/pipe.dart';
 import '../widgets/score_bar.dart';
 import 'settings_screen.dart';
+import 'login_screen.dart';
+import 'leaderboard_screen.dart';
 
 // GameScreen is StatefulWidget so we can start/stop music with the widget lifecycle.
 class GameScreen extends StatefulWidget {
@@ -19,20 +23,78 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  // Guard so we only sync score once per game-over event.
+  bool _syncedThisRound = false;
+
   @override
   void initState() {
     super.initState();
-    // Start music as soon as GameScreen mounts (splash has already finished).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AudioService>().startMusic();
+      // Listen for game-state changes to trigger score sync on game-over.
+      context.read<GameProvider>().addListener(_onGameStateChanged);
     });
   }
 
   @override
   void dispose() {
-    // Stop music when the screen is disposed (app closing or navigating away).
     context.read<AudioService>().stopMusic();
+    // Remove listener before dispose.
+    context.read<GameProvider>().removeListener(_onGameStateChanged);
     super.dispose();
+  }
+
+  // ── Score-sync listener ────────────────────────────────────────────────────────
+
+  void _onGameStateChanged() {
+    if (!mounted) return;
+    final game = context.read<GameProvider>();
+    if (game.state == GameState.gameOver && !_syncedThisRound) {
+      _syncedThisRound = true;
+      // Fire-and-forget; LeaderboardProvider handles silent errors.
+      context.read<LeaderboardProvider>().syncScore(game.score);
+    } else if (game.state == GameState.playing) {
+      _syncedThisRound = false;
+    }
+  }
+
+  // ── Leaderboard button handler ─────────────────────────────────────────────────
+
+  void _onLeaderboardTap() {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isSignedIn) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, __, ___) => const LoginScreen(),
+          transitionsBuilder: (_, animation, __, child) => SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 350),
+          pageBuilder: (_, __, ___) => const LeaderboardScreen(),
+          transitionsBuilder: (_, animation, __, child) => SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -42,8 +104,8 @@ class _GameScreenState extends State<GameScreen> {
     // Inject real screen size every frame for accurate collision geometry.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<GameProvider>().updateScreenSize(
-        MediaQuery.of(context).size,
-      );
+            MediaQuery.of(context).size,
+          );
     });
 
     final topPad = MediaQuery.of(context).padding.top;
@@ -63,7 +125,7 @@ class _GameScreenState extends State<GameScreen> {
           if (game.state == GameState.playing)
             ...List.generate(
               game.pipeX.length,
-                  (i) => Pipe(x: game.pipeX[i], gapY: game.pipeGapY[i]),
+              (i) => Pipe(x: game.pipeX[i], gapY: game.pipeGapY[i]),
             ),
 
           // ── Ground ───────────────────────────────────────────────────────
@@ -89,7 +151,7 @@ class _GameScreenState extends State<GameScreen> {
             child: const ScoreBar(),
           ),
 
-          // ── Settings button — ready state only (top-right) ────────────────
+          // ── Settings button — ready state only (top-right) ───────────────
           if (game.state == GameState.ready)
             Positioned(
               top: topPad + 4,
@@ -124,6 +186,21 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
 
+          // ── Leaderboard button — ready OR game-over state (left of settings) ─
+          if (game.state == GameState.ready || game.state == GameState.gameOver)
+            Positioned(
+              top: topPad + 4,
+              right: 52,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.leaderboard_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                onPressed: _onLeaderboardTap,
+              ),
+            ),
+
           // ── Ready state — START button ────────────────────────────────────
           if (game.state == GameState.ready)
             Positioned.fill(
@@ -133,7 +210,7 @@ class _GameScreenState extends State<GameScreen> {
                   const SizedBox(height: 100),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.85),
+                      backgroundColor: Colors.white.withValues(alpha: 0.85),
                       foregroundColor: Colors.black87,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 52, vertical: 14),
@@ -161,7 +238,7 @@ class _GameScreenState extends State<GameScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 32, vertical: 28),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.68),
+                  color: Colors.black.withValues(alpha: 0.68),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(

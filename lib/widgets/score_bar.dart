@@ -63,7 +63,7 @@ class _ScoreColumn extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: Colors.white.withOpacity(0.85),
+            color: Colors.white.withValues(alpha: 0.85),
             fontWeight: FontWeight.w700,
             letterSpacing: 1.8,
             shadows: const [

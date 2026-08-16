@@ -24,6 +24,7 @@ A Flappy Bird-style arcade game for Android built with Flutter. Control a dragon
 -  Difficulty increases at score 10
 -  All data stored locally — no internet required
 -  One-tap controls
+-  Screen-specific security — Android `FLAG_SECURE` prevents capturing/recording sensitive screens (Login, Leaderboard, Settings/Profile)
 
 ---
 
@@ -62,7 +63,8 @@ lib/
  │    ├── game_screen.dart        — main game UI and state rendering
  │    └── settings_screen.dart    — audio settings
  ├── services/
- │    └── audio_service.dart      — music playback, volume, persistence
+ │    ├── audio_service.dart      — music playback, volume, persistence
+ │    └── security_service.dart   — dynamic FLAG_SECURE window controller
  ├── widgets/
  │    ├── dragon.dart             — dragon sprite widget
  │    ├── pipe.dart               — pipe pair widget
@@ -144,6 +146,9 @@ A point is awarded when a pipe's right edge crosses the dragon's horizontal cent
 
 ### Audio
 Background music starts when the game screen mounts (after the splash screen) and stops when the app closes. Volume and mute state persist across app restarts.
+
+### Security (FLAG_SECURE)
+Sensitive screens (Login, Leaderboard, Settings/Profile) are protected using Android's native `FLAG_SECURE` window setting. A custom Flutter `MethodChannel` communicates with the native Android Kotlin code in `MainActivity.kt` to dynamically enable the secure flag when entering these screens and disable it upon exit (using reference counting to manage overlapping route states). This prevents the device from taking screenshots, screen recordings, or showing preview snapshots in the recent-app switcher for those pages, while keeping the main gameplay screens free for sharing high scores.
 
 ---
 

@@ -45,5 +45,25 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- URL Schemes for Supabase OAuth redirect -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.pixi.dragon</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.pixi.dragon</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Query schemes for Google Sign-In -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>googlechrome</string>
+		<string>googleplus</string>
+	</array>
 </dict>
 </plist>

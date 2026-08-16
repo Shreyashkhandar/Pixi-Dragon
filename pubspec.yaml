@@ -14,10 +14,18 @@ dependencies:
   audioplayers: ^6.0.0
   shared_preferences: ^2.3.2
   flutter_dotenv: ^5.1.0
+  supabase_flutter: ^2.5.0
+  image_picker: ^1.1.2
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
 flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/images/background/forest_bg.png
     - assets/images/bird/flappy_dragon.png
     - assets/images/ground/brick_wall.png
